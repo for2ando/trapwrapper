@@ -11,6 +11,10 @@ trap-open() {
 trap-close() {
   prefix="$1"
   shift
+  #set -x
+  eval set \${${prefix}_signals}
+  eval trap - "$@"
+  #set +x
   eval unset ${prefix}_signals ${prefix}_cmds
 }
 

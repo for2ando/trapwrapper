@@ -1,4 +1,5 @@
 #!/bin/bash
+pname=$(basename "$0")
 
 source ./trapwrapper.sh
 source ./basictests.sh
@@ -88,76 +89,93 @@ test "${t2_cmds['cmd23']}" = 1 && echo 'Success.' || { echo 'Fail.'; $((nerr++))
 echo -- test of calltrap-1
 trap '' $signals1
 trap '' $signals2
-trap-calltrap t1
-trap -p | {
-  while read arg1 arg2 arg3 arg4; do
-    case "$arg4" in
-    EXIT) #0
-      echo -n 'test 41 ... '
-      test "$arg3" = "'cmd12'" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
-      ;;
-    SIGHUP) #1
-      echo -n 'test 42 ... '
-      test "$arg3" = "'cmd12'" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
-      ;;
-    SIGINT) #2
-      echo -n 'test 43 ... '
-      test "$arg3" = "'cmd12'" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
-      ;;
-    SIGQUIT) #3
-      echo -n 'test 44 ... '
-      test "$arg3" = "'cmd12'" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
-      ;;
-    SIGTERM) #15
-      echo -n 'test 45 ... '
-      test "$arg3" = "''" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
-      ;;
-    ERR) #ERR
-      echo -n 'test 46 ... '
-      test "$arg3" = "''" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
-      ;;
-    *)
-      ;;
-    esac
+traptest() {
+  targetsignal=$1
+  targetcmds="$2"
+  file="$3"
+  signalmatch=0
+  cmdsmatch=0
+  fgrep "$targetsignal" "$file" | while read name opt cmds signal; do
+    test "$signal" = "$targetsignal" && {
+      test $((++signalmatch)) -ge 2 && return 1
+      test "$cmds" = "$targetcmds" && cmdsmatch=1
+    }
   done
+  return $cmdsmatch
 }
+tmp1="$(mktemp $pname.XXXXXXXX)"
 
+trap-calltrap t1
+trap -p >"$tmp1"
+echo -n 'test 41 ... '
+traptest EXIT "'cmd12'" "$tmp1" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
+echo -n 'test 42 ... '
+traptest SIGHUP "'cmd12'" "$tmp1" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
+echo -n 'test 43 ... '
+traptest SIGINT "'cmd12'" "$tmp1" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
+echo -n 'test 44 ... '
+traptest SIGQUIT "'cmd12'" "$tmp1" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
+echo -n 'test 45 ... '
+traptest SIGTERM "''" "$tmp1" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
+echo -n 'test 46 ... '
+traptest ERR "''" "$tmp1" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
 
 echo -- test of calltrap-2
 trap-calltrap t2
-trap -p | {
-  while read arg1 arg2 arg3 arg4; do
-    case "$arg4" in
-    EXIT) #0
-      echo -n 'test 51 ... '
-      test "$arg3" = "'cmd12'" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
-      ;;
-    SIGHUP) #1
-      echo -n 'test 52 ... '
-      test "$arg3" = "'cmd12'" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
-      ;;
-    SIGINT) #2
-      echo -n 'test 53 ... '
-      test "$arg3" = "'cmd12'" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
-      ;;
-    SIGQUIT) #3
-      echo -n 'test 54 ... '
-      test "$arg3" = "'cmd12'" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
-      ;;
-    SIGTERM) #15
-      echo -n 'test 55 ... '
-      test "$arg3" = "'cmd23'" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
-      ;;
-    ERR) #ERR
-      echo -n 'test 56 ... '
-      test "$arg3" = "'cmd23'" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
-      ;;
-    *)
-      ;;
-    esac
-  done
-}
+trap -p >"$tmp1"
+echo -n 'test 51 ... '
+traptest EXIT "'cmd12'" "$tmp1" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
+echo -n 'test 52 ... '
+traptest SIGHUP "'cmd12'" "$tmp1" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
+echo -n 'test 53 ... '
+traptest SIGINT "'cmd12'" "$tmp1" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
+echo -n 'test 54 ... '
+traptest SIGQUIT "'cmd12'" "$tmp1" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
+echo -n 'test 55 ... '
+traptest SIGTERM "'cmd23'" "$tmp1" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
+echo -n 'test 56 ... '
+traptest ERR "'cmd23'" "$tmp1" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
 
+echo -- test of close-1
+trap-close t1
+trap -p >"$tmp1"
+echo -n 'test 61 ... '
+traptest EXIT "''" "$tmp1" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
+echo -n 'test 62 ... '
+traptest SIGHUP "''" "$tmp1" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
+echo -n 'test 63 ... '
+traptest SIGINT "''" "$tmp1" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
+echo -n 'test 64 ... '
+traptest SIGQUIT "''" "$tmp1" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
+echo -n 'test 65 ... '
+traptest SIGTERM "'cmd23'" "$tmp1" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
+echo -n 'test 66 ... '
+traptest ERR "'cmd23'" "$tmp1" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
+echo -n 'test 67 ... '
+is_unset t1_cmds && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
+echo -n 'test 68 ... '
+is_unset t1_signals && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
+
+echo -- test of close-2
+trap-close t2
+echo -n 'test 71 ... '
+traptest EXIT "''" "$tmp1" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
+echo -n 'test 72 ... '
+traptest SIGHUP "''" "$tmp1" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
+echo -n 'test 73 ... '
+traptest SIGINT "''" "$tmp1" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
+echo -n 'test 74 ... '
+traptest SIGQUIT "''" "$tmp1" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
+echo -n 'test 75 ... '
+traptest SIGTERM "''" "$tmp1" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
+echo -n 'test 76 ... '
+traptest ERR "''" "$tmp1" && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
+echo -n 'test 77 ... '
+is_unset t2_cmds && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
+echo -n 'test 78 ... '
+is_unset t2_signals && echo 'Success.' || { echo 'Fail.'; $((nerr++));}
+
+rm -f "$tmp1"
 trap - $signals1
 trap - $signals2
 

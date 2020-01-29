@@ -23,3 +23,6 @@ $(IMPORTFILES1): $(IMPORTDIR1)
 
 $(IMPORTDIR1):
 	cd $(dir $@) && git clone git@github.com:for2ando/copy-android-apps.git $(notdir $@)
+
+clean:
+	rm -f $(IMPORTFILES1)

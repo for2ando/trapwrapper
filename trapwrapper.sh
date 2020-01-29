@@ -37,6 +37,6 @@ trap-calltrap() {
   IFS_BACKUP="$IFS"
   IFS=';'
   eval set \${${prefix}_signals}
-  eval trap \${\!${prefix}_cmds[*]} "$@"
+  eval trap "\"\${!${prefix}_cmds[*]}\"" "$@"
   IFS="$IFS_BACKUP"
 }
